@@ -25,7 +25,6 @@ install:
 	@hash govendor > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
 		go get -u github.com/kardianos/govendor; \
 	fi
-	@if [ -f ~/.bash_profile ]; then source ~/.bash_profile; fi
 	govendor sync
 
 vet:
@@ -45,7 +44,6 @@ fmt-check:
 	fi;
 
 $(CMD):
-	go get ./modules/$@
 	go build -o bin/$@/falcon-$@ ./modules/$@
 
 .PHONY: $(TARGET)
@@ -64,14 +62,36 @@ pack: checkbin
 	@$(foreach var,$(CMD),cp ./bin/$(var)/falcon-$(var) ./out/$(var)/bin;)
 	@cp -r ./modules/agent/public ./out/agent/
 	@(cd ./out && ln -s ./agent/public/ ./public)
-	@cp -r ./modules/agent/plugins ./out/agent/
-	@(cd ./out && ln -s ./agent/plugins/ ./plugins)
+	@(cd ./out && mkdir -p ./agent/plugin && ln -s ./agent/plugin/ ./plugin)
 	@cp -r ./modules/api/data ./out/api/
 	@mkdir out/graph/data
 	@bash ./config/confgen.sh
 	@cp $(TARGET) ./out/$(TARGET)
 	tar -C out -zcf open-falcon-v$(VERSION).tar.gz .
 	@rm -rf out
+
+pack4docker: checkbin
+	@if [ -e out ] ; then rm -rf out; fi
+	@mkdir out
+	@$(foreach var,$(CMD),mkdir -p ./out/$(var)/bin;)
+	@$(foreach var,$(CMD),mkdir -p ./out/$(var)/config;)
+	@$(foreach var,$(CMD),mkdir -p ./out/$(var)/logs;)
+	@$(foreach var,$(CMD),cp ./config/$(var).json ./out/$(var)/config/cfg.json;)
+	@$(foreach var,$(CMD),cp ./bin/$(var)/falcon-$(var) ./out/$(var)/bin;)
+	@cp -r ./modules/agent/public ./out/agent/
+	@(cd ./out && ln -s ./agent/public/ ./public)
+	@(cd ./out && mkdir -p ./agent/plugin && ln -s ./agent/plugin/ ./plugin)
+	@cp -r ./modules/api/data ./out/api/
+	@mkdir out/graph/data
+	@bash ./docker/confgen4docker.sh
+	@cp ./docker/ctrl.sh ./out/ && chmod +x ./out/ctrl.sh
+	@cp $(TARGET) ./out/$(TARGET)
+	tar -C out -zcf open-falcon-v$(VERSION).tar.gz .
+	@rm -rf out
+
+.PHONY: test
+test:
+	@go test ./modules/api/test
 
 clean:
 	@rm -rf ./bin

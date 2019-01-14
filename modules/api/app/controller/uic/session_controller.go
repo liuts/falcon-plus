@@ -1,3 +1,17 @@
+// Copyright 2017 Xiaomi, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package uic
 
 import (
@@ -16,6 +30,10 @@ type APILoginInput struct {
 	Password string `json:"password"  form:"password" binding:"required"`
 }
 
+type APIAdminLoginInput struct {
+	Name string `json:"name"  form:"name" binding:"required"`
+}
+
 func Login(c *gin.Context) {
 	inputs := APILoginInput{}
 	if err := c.Bind(&inputs); err != nil {
@@ -30,11 +48,59 @@ func Login(c *gin.Context) {
 	}
 	db.Uic.Where(&user).Find(&user)
 	switch {
-	case user.Name == "":
+	case user.ID == 0:
 		h.JSONR(c, badstatus, "no such user")
 		return
 	case user.Passwd != utils.HashIt(password):
 		h.JSONR(c, badstatus, "password error")
+		return
+	}
+	var session uic.Session
+	// response := map[string]string{}
+	s := db.Uic.Table("session").Where("uid = ?", user.ID).Scan(&session)
+	if s.Error != nil && s.Error.Error() != "record not found" {
+		h.JSONR(c, badstatus, s.Error)
+		return
+	} else if session.ID == 0 {
+		session.Sig = utils.GenerateUUID()
+		session.Expired = int(time.Now().Unix()) + 3600*24*30
+		session.Uid = user.ID
+		db.Uic.Create(&session)
+	}
+	log.Debugf("session: %v", session)
+	resp := struct {
+		Sig   string `json:"sig,omitempty"`
+		Name  string `json:"name,omitempty"`
+		Admin bool   `json:"admin"`
+	}{session.Sig, user.Name, user.IsAdmin()}
+	h.JSONR(c, resp)
+	return
+}
+
+func AdminLogin(c *gin.Context) {
+	inputs := APIAdminLoginInput{}
+	if err := c.Bind(&inputs); err != nil {
+		h.JSONR(c, badstatus, "name is blank")
+		return
+	}
+	name := inputs.Name
+
+	user := uic.User{
+		Name: name,
+	}
+	adminuser, err := h.GetUser(c)
+	if err != nil {
+		h.JSONR(c, badstatus, err.Error())
+		return
+	}
+
+	db.Uic.Where(&user).Find(&user)
+	switch {
+	case user.ID == 0:
+		h.JSONR(c, badstatus, "no such user")
+		return
+	case user.Role >= adminuser.Role:
+		h.JSONR(c, badstatus, "API_USER not admin, no permissions can do this")
 		return
 	}
 	var session uic.Session
@@ -89,7 +155,7 @@ func AuthSession(c *gin.Context) {
 		h.JSONR(c, http.StatusUnauthorized, err)
 		return
 	}
-	h.JSONR(c, "session is vaild!")
+	h.JSONR(c, "session is valid!")
 	return
 }
 

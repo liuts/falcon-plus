@@ -1,3 +1,17 @@
+// Copyright 2017 Xiaomi, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package rrdtool
 
 import (
@@ -55,10 +69,36 @@ var (
 	stat_cnt         [STAT_SIZE]uint64
 )
 
+type MigrateCounter struct {
+	FetchSuccess  uint64
+	FetchErr      uint64
+	FetchNotExist uint64
+	SendSuccess   uint64
+	SendErr       uint64
+	QuerySuccess  uint64
+	QueryErr      uint64
+	ConnErr       uint64
+	ConnDial      uint64
+}
+
 func init() {
 	Consistent = consistent.New()
 	Net_task_ch = make(map[string]chan *Net_task_t)
 	clients = make(map[string][]*rpc.Client)
+}
+
+func GetCounterV2() *MigrateCounter {
+	return &MigrateCounter{
+		FetchSuccess:  atomic.LoadUint64(&stat_cnt[FETCH_S_SUCCESS]),
+		FetchErr:      atomic.LoadUint64(&stat_cnt[FETCH_S_ERR]),
+		FetchNotExist: atomic.LoadUint64(&stat_cnt[FETCH_S_ISNOTEXIST]),
+		SendSuccess:   atomic.LoadUint64(&stat_cnt[SEND_S_SUCCESS]),
+		SendErr:       atomic.LoadUint64(&stat_cnt[SEND_S_ERR]),
+		QuerySuccess:  atomic.LoadUint64(&stat_cnt[QUERY_S_SUCCESS]),
+		QueryErr:      atomic.LoadUint64(&stat_cnt[QUERY_S_ERR]),
+		ConnErr:       atomic.LoadUint64(&stat_cnt[CONN_S_ERR]),
+		ConnDial:      atomic.LoadUint64(&stat_cnt[CONN_S_DIAL]),
+	}
 }
 
 func GetCounter() (ret string) {
@@ -286,7 +326,7 @@ func fetch_rrd(client **rpc.Client, key string, addr string) error {
 
 		if err == nil {
 			done := make(chan error, 1)
-			io_task_chan <- &io_task_t{
+			io_task_chans[getIndex(md5)] <- &io_task_t{
 				method: IO_TASK_M_WRITE,
 				args: &g.File{
 					Filename: filename,

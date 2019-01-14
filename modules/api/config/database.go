@@ -1,3 +1,17 @@
+// Copyright 2017 Xiaomi, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package config
 
 import (
@@ -33,9 +47,9 @@ func SetLogLevel(loggerlevel bool) {
 	dbp.Alarm.LogMode(loggerlevel)
 }
 
-func InitDB(loggerlevel bool) (err error) {
+func InitDB(loggerlevel bool, vip *viper.Viper) (err error) {
 	var p *sql.DB
-	portal, err := gorm.Open("mysql", viper.GetString("db.faclon_portal"))
+	portal, err := gorm.Open("mysql", vip.GetString("db.falcon_portal"))
 	portal.Dialect().SetDB(p)
 	portal.LogMode(loggerlevel)
 	if err != nil {
@@ -45,7 +59,7 @@ func InitDB(loggerlevel bool) (err error) {
 	dbp.Falcon = portal
 
 	var g *sql.DB
-	graphd, err := gorm.Open("mysql", viper.GetString("db.graph"))
+	graphd, err := gorm.Open("mysql", vip.GetString("db.graph"))
 	graphd.Dialect().SetDB(g)
 	graphd.LogMode(loggerlevel)
 	if err != nil {
@@ -55,7 +69,7 @@ func InitDB(loggerlevel bool) (err error) {
 	dbp.Graph = graphd
 
 	var u *sql.DB
-	uicd, err := gorm.Open("mysql", viper.GetString("db.uic"))
+	uicd, err := gorm.Open("mysql", vip.GetString("db.uic"))
 	uicd.Dialect().SetDB(u)
 	uicd.LogMode(loggerlevel)
 	if err != nil {
@@ -65,7 +79,7 @@ func InitDB(loggerlevel bool) (err error) {
 	dbp.Uic = uicd
 
 	var d *sql.DB
-	dashd, err := gorm.Open("mysql", viper.GetString("db.dashboard"))
+	dashd, err := gorm.Open("mysql", vip.GetString("db.dashboard"))
 	dashd.Dialect().SetDB(d)
 	dashd.LogMode(loggerlevel)
 	if err != nil {
@@ -75,7 +89,7 @@ func InitDB(loggerlevel bool) (err error) {
 	dbp.Dashboard = dashd
 
 	var alm *sql.DB
-	almd, err := gorm.Open("mysql", viper.GetString("db.alarms"))
+	almd, err := gorm.Open("mysql", vip.GetString("db.alarms"))
 	almd.Dialect().SetDB(alm)
 	almd.LogMode(loggerlevel)
 	if err != nil {

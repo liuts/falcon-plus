@@ -1,13 +1,26 @@
+// Copyright 2017 Xiaomi, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package strategy
 
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"regexp"
 	"strconv"
 	"strings"
-
-	"io/ioutil"
 
 	"github.com/gin-gonic/gin"
 	h "github.com/open-falcon/falcon-plus/modules/api/app/helper"
@@ -52,7 +65,7 @@ type APICreateStrategyInput struct {
 
 func (this APICreateStrategyInput) CheckFormat() (err error) {
 	validOp := regexp.MustCompile(`^(>|=|<|!)(=)?$`)
-	validRightValue := regexp.MustCompile(`^\d+$`)
+	validRightValue := regexp.MustCompile(`^\-?\d+(\.\d+)?$`)
 	validTime := regexp.MustCompile(`^\d{2}:\d{2}$`)
 	switch {
 	case !validOp.MatchString(this.Op):
@@ -95,7 +108,7 @@ func CreateStrategy(c *gin.Context) {
 		h.JSONR(c, expecstatus, dt.Error)
 		return
 	}
-	h.JSONR(c, "stragtegy created")
+	h.JSONR(c, strategy)
 	return
 }
 
@@ -135,7 +148,7 @@ type APIUpdateStrategyInput struct {
 
 func (this APIUpdateStrategyInput) CheckFormat() (err error) {
 	validOp := regexp.MustCompile(`^(>|=|<|!)(=)?$`)
-	validRightValue := regexp.MustCompile(`^\d+$`)
+	validRightValue := regexp.MustCompile(`^\-?\d+(\.\d+)?$`)
 	validTime := regexp.MustCompile(`^\d{2}:\d{2}$`)
 	switch {
 	case !validOp.MatchString(this.Op):

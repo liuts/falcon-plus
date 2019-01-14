@@ -1,3 +1,17 @@
+// Copyright 2017 Xiaomi, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package dashboard_graph
 
 import (
@@ -112,18 +126,22 @@ func DashboardGraphCreate(c *gin.Context) {
 		d.GraphType = "h"
 	}
 
-	dt := db.Dashboard.Table("dashboard_graph").Create(&d)
+	tx := db.Dashboard.Begin()
+	dt := tx.Table("dashboard_graph").Create(&d)
 	if dt.Error != nil {
+		tx.Rollback()
 		h.JSONR(c, badstatus, dt.Error)
 		return
 	}
 
 	var lid []int
-	dt = db.Dashboard.Table("dashboard_graph").Raw("select LAST_INSERT_ID() as id").Pluck("id", &lid)
+	dt = tx.Table("dashboard_graph").Raw("select LAST_INSERT_ID() as id").Pluck("id", &lid)
 	if dt.Error != nil {
+		tx.Rollback()
 		h.JSONR(c, badstatus, dt.Error)
 		return
 	}
+	tx.Commit()
 	aid := lid[0]
 
 	h.JSONR(c, map[string]int{"id": aid})

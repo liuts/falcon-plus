@@ -1,3 +1,17 @@
+// Copyright 2017 Xiaomi, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package uic
 
 import (
@@ -213,7 +227,7 @@ func GetUser(c *gin.Context) {
 	}
 	fuser := uic.User{ID: int64(uid)}
 	if dt := db.Uic.Table("user").Find(&fuser); dt.Error != nil {
-		h.JSONR(c, http.StatusExpectationFailed, dt.Error)
+		h.JSONR(c, http.StatusInternalServerError, dt.Error)
 		return
 	}
 	h.JSONR(c, fuser)
@@ -279,8 +293,53 @@ func IsUserInTeams(c *gin.Context) {
 		h.JSONR(c, http.StatusExpectationFailed, dt.Error)
 		return
 	}
-
+	if len(tus) == 0 {
+		h.JSONR(c, "false")
+		return
+	}
 	h.JSONR(c, "true")
+	return
+}
+
+func GetUserTeams(c *gin.Context) {
+	uidtmp := c.Params.ByName("uid")
+	if uidtmp == "" {
+		h.JSONR(c, badstatus, "user id is missing")
+		return
+	}
+	uid, err := strconv.Atoi(uidtmp)
+	if err != nil {
+		h.JSONR(c, badstatus, err)
+		return
+	}
+
+	user := uic.User{}
+	dt := db.Uic.Table("user").Where("id = ?", uid).First(&user)
+	if dt.Error != nil {
+		h.JSONR(c, http.StatusExpectationFailed, dt.Error)
+		return
+	}
+
+	tus := []uic.RelTeamUser{}
+	dt = db.Uic.Table("rel_team_user").Where("uid = ?", uid).Find(&tus)
+	if dt.Error != nil {
+		h.JSONR(c, http.StatusExpectationFailed, dt.Error)
+		return
+	}
+	tids := []int64{}
+	for _, ut := range tus {
+		tids = append(tids, ut.Tid)
+	}
+	teams := []uic.Team{}
+	tidsStr, _ := utils.ArrInt64ToString(tids)
+	dt = db.Uic.Table("team").Where(fmt.Sprintf("id in (%s)", tidsStr)).Find(&teams)
+	if dt.Error != nil {
+		h.JSONR(c, http.StatusExpectationFailed, dt.Error)
+		return
+	}
+	h.JSONR(c, map[string]interface{}{
+		"teams": teams,
+	})
 	return
 }
 
@@ -477,6 +536,7 @@ func ChangeRoleOfUser(c *gin.Context) {
 		h.JSONR(c, http.StatusExpectationFailed, dt.Error)
 		return
 	}
+	//TODO: fix me of type
 	h.JSONR(c, fmt.Sprintf("user role update sccuessful, affect row: %v", dt.RowsAffected))
 	return
 }

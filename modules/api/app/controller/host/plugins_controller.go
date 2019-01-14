@@ -1,3 +1,17 @@
+// Copyright 2017 Xiaomi, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package host
 
 import (
@@ -12,7 +26,7 @@ import (
 
 type APICreatePluginInput struct {
 	GrpId   int64  `json:"hostgroup_id" binding:"required"`
-	DirPaht string `json:"dir_path" binding:"required"`
+	DirPath string `json:"dir_path" binding:"required"`
 }
 
 func CreatePlugin(c *gin.Context) {
@@ -33,7 +47,7 @@ func CreatePlugin(c *gin.Context) {
 			return
 		}
 	}
-	plugin := f.Plugin{Dir: inputs.DirPaht, GrpId: inputs.GrpId, CreateUser: user.Name}
+	plugin := f.Plugin{Dir: inputs.DirPath, GrpId: inputs.GrpId, CreateUser: user.Name}
 	if dt := db.Falcon.Save(&plugin); dt.Error != nil {
 		h.JSONR(c, expecstatus, dt.Error)
 		return
